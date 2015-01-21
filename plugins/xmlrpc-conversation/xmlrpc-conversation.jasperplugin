@@ -1,0 +1,15 @@
+[Core]
+Name = XMLRPC Conversation Plugin
+Slug = xmlrpc-conversation
+Module = xmlrpc-conversation
+
+[Documentation]
+Author = Jan Holthuis
+License = GPL
+Version = 0.1
+Website = http://jasperproject.github.io
+Priority = -9999
+Description = Allows you to communicate with Jasper via an XMLRPC interface
+
+[Dependencies]
+JasperVersion = 2.0.0

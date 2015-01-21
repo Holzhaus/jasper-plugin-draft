@@ -1,0 +1,15 @@
+[Core]
+Name = Dummy STT
+Slug = dummy-stt
+Module = dummy-stt
+
+[Documentation]
+Author = Jan Holthuis
+License = GPL
+Version = 0.1
+Website = http://jasperproject.github.io
+Priority = -9999
+Description = A dummy Speech-To-Text engine, which will always return an empty result. For testing purposes only.
+
+[Dependencies]
+JasperVersion = 2.0.0

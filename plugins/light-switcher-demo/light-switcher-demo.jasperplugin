@@ -1,0 +1,14 @@
+[Core]
+Name = Light Switcher Demo
+Slug = light-switcher-demo
+Module = light-switcher-demo
+
+[Documentation]
+Author = Jan Holthuis
+License = BSD
+Version = 0.0.1
+Website = http://jasperproject.github.io
+Description = An light switcher example plugin. For testing purposes only.
+
+[Dependencies]
+JasperVersion = 1.0.0

@@ -1,0 +1,14 @@
+[Core]
+Name = Light Switcher i18n Demo
+Slug = localized-plugin demo
+Module = localized-plugin-demo
+
+[Documentation]
+Author = Jan Holthuis
+License = BSD
+Version = 0.0.1
+Website = http://jasperproject.github.io
+Description = An light switcher example plugin with internationalization. For testing purposes only.
+
+[Dependencies]
+JasperVersion = 1.0.0

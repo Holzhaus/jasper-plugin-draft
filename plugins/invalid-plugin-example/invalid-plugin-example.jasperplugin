@@ -1,0 +1,14 @@
+[Core]
+Name = Invalid Plugin Example
+# invalid slug
+Slug = invalid_plugin example
+Module = invalid-plugin-example
+
+[Documentation]
+Author = Jan Holthuis
+# License is missing, too
+#License = GPL
+Version = 0.1
+Website = http://jasperproject.github.io
+Priority = -9999
+Description = A dummy Speech-To-Text engine, which will always return an empty result. For testing purposes only.
