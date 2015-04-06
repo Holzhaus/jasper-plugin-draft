@@ -74,12 +74,19 @@ class ConfigManager(object):
             value = default_value
         return value
 
-    def write_to_fp(self, f, maxlen=80):
-        sections = sorted(self._reg.keys())
-        # Assure that 'main' is the first section
-        if 'main' in self._reg:
-            sections.remove('main')
-            sections.insert(0, 'main')
+    def write_to_fp(self, f, write_comments=True, maxlen=80):
+        sections = []
+        # Assure that 'core' is the first section
+        if 'core' in self._reg:
+            sections.append('core')
+        # now all other non-plugin sections
+        sections.extend(sorted([section for section in self._reg.keys()
+                                if not section.startswith("plugin-") and
+                                not section == 'core']))
+        # Finally, the plugin sections
+        sections.extend(sorted([section for section in self._reg.keys()
+                                if section.startswith("plugin-")]))
+        # We got our section order, now write them to the fp
         for section in sections:
             # Write section headers
             f.write('[%s]\n' % section)
@@ -87,7 +94,7 @@ class ConfigManager(object):
                 default_value, is_boolean, desc = self._reg[section][option]
 
                 # Write comments
-                if desc:
+                if write_comments and desc:
                     splitpoint = 0
                     if (maxlen-2) > 0:
                         while len(desc[splitpoint:]) > (maxlen-2):
@@ -98,20 +105,5 @@ class ConfigManager(object):
                     f.write('# %s\n' % desc[splitpoint:])
 
                 # Write option/value pairs
-                f.write('#%s = %s\n\n' % (option, str(default_value)))
-
-"""
-c = ConfigManager()
-c.register_option('google-stt', 'api-key',
-                  desc='The API key from the Google Developer console')
-c.register_option('general', 'show-debug-messages', is_boolean=True,
-                  default_value=False,
-                  desc='Set to true if you want to see debug messages')
-print(c.get('general', 'show-debug-messages'))
-print(c.get('google-stt', 'api-key'))
-import tempfile
-with tempfile.TemporaryFile() as f:
-    c.write_to_fp(f)
-    f.seek(0)
-    print(f.read())
-"""
+                f.write('#%s = %s\n' % (option, str(default_value)))
+            f.write('\n')

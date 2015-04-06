@@ -1,4 +1,4 @@
-from plugintypes import SpeechHandlerPlugin
+from core.plugintypes import SpeechHandlerPlugin
 
 
 class LightSwitcherDemo(SpeechHandlerPlugin):
@@ -27,6 +27,7 @@ class LightSwitcherDemo(SpeechHandlerPlugin):
         return locations
 
     def activate(self):
+        _ = self.gettext
         locations = self.locations.keys()
         if locations:
             self.register_command(_("Switch {location} lights {state}"),

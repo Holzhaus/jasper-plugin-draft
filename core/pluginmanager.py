@@ -6,6 +6,8 @@ import slugify
 from distutils.spawn import find_executable
 import ConfigParser
 import itertools
+import os
+import gettext
 
 
 import plugintypes
@@ -19,6 +21,7 @@ import yapsy.FilteredPluginManager
 # FIXME: These Two values should not be hardcoded
 CURRENT_JASPERVERSION = (2, 0, 0)
 NETWORK_AVAILABLE = True
+LANGUAGE = "en_US"
 
 
 class PluginInfo(yapsy.PluginInfo.PluginInfo):
@@ -93,42 +96,25 @@ class PluginInfo(yapsy.PluginInfo.PluginInfo):
         return value
 
     @property
-    def is_available(self):
-        # Check Jasperversion
-        if self.depends_jasperversion > CURRENT_JASPERVERSION:
-            needed_version_str = '.'.join(
-                str(n) for n in self.depends_jasperversion)
-            current_version_str = '.'.join(
-                str(n) for n in CURRENT_JASPERVERSION)
-            self._logger.info("Plugin '%s' rejected: Jasper is outdated " +
-                              "(%s > %s)", self.name, needed_version_str,
-                              current_version_str)
-            return False
+    def supported_languages(self):
+        path = os.path.join(os.path.dirname(self.path), "languages")
+        langs = set()
+        if os.path.exists(path):
+            langs = set(os.path.splitext(os.path.basename(filename))[0]
+                        for filename in os.listdir(path)
+                        if os.path.splitext(filename)[1] == "%smo" % os.extsep)
+        # Return en_US if plugin is not translated
+        return set(['en_US']) if not langs else langs
 
-        # Check Network
-        if self.depends_network and not NETWORK_AVAILABLE:
-            self._logger.info("Plugin '%s' rejected: Needs network connection",
-                              self.name)
-            return False
-
-        # Check executables
-        for executable_name in self.depends_executables:
-            if not find_executable(executable_name):
-                self._logger.info("Plugin '%s' rejected: Needs executable " +
-                                  "'%s'", self.name, executable_name)
-                return False
-
-        # Check modules
-        for module_name in self.depends_modules:
-            try:
-                imp.find_module(module_name)
-            except ImportError:
-                self._logger.info("Plugin '%s' rejected: Needs module '%s'",
-                                  self.name, module_name)
-                return False
-
-        # Everything worked, this module is available
-        return True
+    def get_translations_path(self, language):
+        os.path.dirname(self.path)
+        if language is not None:
+            language_file = os.path.join(os.path.dirname(self.path),
+                                         "languages",
+                                         os.extsep.join([language, 'mo']))
+            if os.access(language_file, os.R_OK):
+                return language_file
+        return None
 
 
 class PluginManager(object):
@@ -151,7 +137,8 @@ class PluginManager(object):
             categories_filter=self.PLUGIN_CATS,
             directories_list=directories_list,
             plugin_locator=locator)
-        self._pm = _ConfPluginManager(config, _FilterPluginManager(pm))
+        self._pm = PluginGettextDecorator(
+          config, PluginConfigDecorator(config, PluginChecker(config, pm)))
         self._pm.collectPlugins()
         for plugin_info in self.get_plugins_of_category(
                 plugintypes.ConversationPlugin.CATEGORY):
@@ -231,28 +218,9 @@ class _FileAnalyzer(yapsy.PluginFileLocator.PluginFileAnalyzerWithInfoFile):
             return (None, None)
         return (infos, config_parser)
 
-"""
-class _I18nPluginManager(yapsy.PluginManagerDecorator.PluginManagerDecorator):
-    def __init__(self, *args, **kwargs):
-        super(self.__class__, self).__init__(*args, **kwargs)
 
-    def __add_translations(self, plugin_info):
-        localedir = os.path.join(os.path.dirname(plugin_info.path), 'locale')
-
-        plugin_info.gettext_object = gettext.translation(plugin_info.slug,
-                                                         localedir,
-                                                         fallback=True
-                                                         languages=)
-        plugin_mod = sys.modules[plugin_info.plugin_object.__module__]
-        plugin_mod._ = plugin_info.gettext_object.ugettext
-
-    def loadPlugins(self, *args, **kwargs):
-        self._component.loadPlugins(*args, **kwargs)
-        for plugin_info in self._component.getAllPlugins():
-            self.__add_translations(plugin_info)"""
-
-
-class _ConfPluginManager(yapsy.PluginManagerDecorator.PluginManagerDecorator):
+class PluginConfigDecorator(
+        yapsy.PluginManagerDecorator.PluginManagerDecorator):
     def __init__(self, configmanager, *args, **kwargs):
         self._configmanager = configmanager
         super(self.__class__, self).__init__(*args, **kwargs)
@@ -283,55 +251,161 @@ class _ConfPluginManager(yapsy.PluginManagerDecorator.PluginManagerDecorator):
             plugin_info.plugin_object.configure()
 
 
-class _FilterPluginManager(yapsy.FilteredPluginManager.FilteredPluginManager):
-    def __init__(self, *args, **kwargs):
+class PluginGettextDecorator(
+        yapsy.PluginManagerDecorator.PluginManagerDecorator):
+    def __init__(self, configmanager, *args, **kwargs):
+        self._configmanager = configmanager
         super(self.__class__, self).__init__(*args, **kwargs)
+        self._logger = logging.getLogger(__name__)
+
+    def get_translations(self, plugin_info, language):
+        translations_path = plugin_info.get_translations_path(language)
+        if translations_path is not None:
+            with open(translations_path, "rb") as f:
+                translations = gettext.GNUTranslations(f)
+                # Check if translations file is valid
+                try:
+                    translations.info()
+                except gettext.LookupError:
+                    self._logger.warning("Plugin '%s' has an invalid " +
+                                         "translations file: %s",
+                                         plugin_info.name, translations_path)
+                    return gettext.NullTranslations()
+                else:
+                    translations.add_fallback(gettext.NullTranslations())
+                    return translations
+        self._logger.info("Plugin '%s' is missing a translations file, " +
+                          "assuming hardcoded en_US strings.",
+                          plugin_info.name)
+        return gettext.NullTranslations()
+
+    def __add_gettext_methods(self, plugin_info, plugin_object):
+        """
+        Add two methods to the plugin objects that will make it
+        possible for it to benefit from this class's api concerning
+        the management of the options.
+        """
+        language = self._configmanager.get("core", "language")
+        TRANSLATIONS = self.get_translations(plugin_info, language)
+
+        def plugin_gettext(*args):
+            return TRANSLATIONS.ugettext(*args)
+
+        def plugin_ngettext(*args):
+            return TRANSLATIONS.ungettext(*args)
+
+        plugin_object.gettext = plugin_gettext
+        plugin_object.ngettext = plugin_ngettext
+
+    def loadPlugins(self, *args, **kwargs):
+        self._component.loadPlugins(*args, **kwargs)
+        for plugin_info in self._component.getAllPlugins():
+            self.__add_gettext_methods(plugin_info,
+                                       plugin_info.plugin_object)
+
+
+class PluginChecker(yapsy.FilteredPluginManager.FilteredPluginManager):
+    def __init__(self, config, *args, **kwargs):
+        super(self.__class__, self).__init__(*args, **kwargs)
+        self._config = config
+        self._config.register_option("plugins", "check-language-support",
+                                     default_value=True, is_boolean=True)
+        self._config.register_option("plugins", "check-metadata",
+                                     default_value=True, is_boolean=True)
+        self._config.register_option("plugins", "check-network",
+                                     default_value=True, is_boolean=True)
         self._logger = logging.getLogger(__name__)
 
     def isPluginOk(self, info):
         slug = slugify.slugify(info.slug)
         if len(slug) == 0:
-            self._logger.warning("Rejecting plugin '%s' (Core/Slug not set)",
+            self._logger.warning("Plugin '%s' rejected: Core/Slug not set",
                                  info.name)
             return False
         elif len(slug) < 5:
-            self._logger.warning("Rejecting plugin '%s' (Core/Slug too short)",
+            self._logger.warning("Plugin '%s' rejected: Core/Slug too short",
                                  info.name)
             return False
         if info.slug != slug:
-            self._logger.warning("Rejecting plugin '%s' (Core/Slug '%s' " +
-                                 "invalid, try '%s')", info.name, info.slug,
+            self._logger.warning("Plugin '%s' rejected: Core/Slug '%s' " +
+                                 "invalid, try '%s'", info.name, info.slug,
                                  slug)
             return False
 
-        if not info.author or info.author == "Unknown":
-            self._logger.warning("Rejecting plugin '%s' (Documentation/" +
-                                 "Author is missing)", info.name)
+        # Check Jasperversion
+        if info.depends_jasperversion > CURRENT_JASPERVERSION:
+            needed_version_str = '.'.join(
+                str(n) for n in info.depends_jasperversion)
+            current_version_str = '.'.join(
+                str(n) for n in CURRENT_JASPERVERSION)
+            self._logger.warning("Plugin '%s' rejected: Jasper is outdated " +
+                                 "(%s > %s)", self.name, needed_version_str,
+                                 current_version_str)
             return False
 
-        if not info.description:
-            self._logger.warning("Rejecting plugin '%s' (Documentation/" +
-                                 "Description is missing)", info.name)
-            return False
-
-        try:
-            info.version
-        except ValueError:
-            self._logger.warning("Rejecting plugin '%s' (Documentation/" +
-                                 "Version is invalid)", info.name)
-            return False
-
-        if info.website and info.website != "None":
-            url = urlparse.urlparse(info.website)
-            if not url.netloc or url.scheme not in ('http', 'https'):
-                self._logger.warning("Rejecting plugin '%s' (Documentation/" +
-                                     "Website is not a valid URL)", info.name)
+        # Check executables
+        for executable_name in info.depends_executables:
+            if not find_executable(executable_name):
+                self._logger.warning("Plugin '%s' rejected: Needs executable" +
+                                     " '%s'", info.name, executable_name)
                 return False
 
-        # Check license
-        if not info.license:
-            self._logger.warning("Rejecting plugin '%s' (Documentation/" +
-                                 "License not set)", info.name)
+        # Check modules
+        for module_name in info.depends_modules:
+            try:
+                imp.find_module(module_name)
+            except ImportError:
+                self._logger.warning("Plugin '%s' rejected: Needs module '%s'",
+                                     info.name, module_name)
+                return False
+
+        # Check Network
+        if self._config.get("plugins", "check-network") and \
+                info.depends_network and not NETWORK_AVAILABLE:
+            self._logger.warning("Plugin '%s' rejected: Needs network " +
+                                 "connection", info.name)
             return False
 
-        return info.is_available
+        # Check if current language is supported by this plugin
+        language = self._config.get("core", "language")
+        language = language if language else 'en_US'
+        if self._config.get("plugins", "check-language-support") and \
+                language not in info.supported_languages:
+            self._logger.warning("Plugin '%s' rejected: Language %s not " +
+                                 "supported", info.name, language)
+            return False
+
+        # Metadata checks, these should be optional
+        if self._config.get("plugins", "check-metadata"):
+            if not info.author or info.author == "Unknown":
+                self._logger.warning("Plugin '%s' rejected: Documentation/" +
+                                     "Author is missing", info.name)
+                return False
+
+            if not info.description:
+                self._logger.warning("Plugin '%s' rejected: Documentation/" +
+                                     "Description is missing", info.name)
+                return False
+
+            try:
+                info.version
+            except ValueError:
+                self._logger.warning("Plugin '%s' rejected: Documentation/" +
+                                     "Version is invalid", info.name)
+                return False
+
+            if info.website and info.website != "None":
+                url = urlparse.urlparse(info.website)
+                if not url.netloc or url.scheme not in ('http', 'https'):
+                    self._logger.warning("Plugin '%s' rejected: " +
+                                         "Documentation/Website is not a " +
+                                         "valid URL", info.name)
+                    return False
+
+            if not info.license:
+                self._logger.warning("Plugin '%s' rejected: Documentation/" +
+                                     "License not set", info.name)
+                return False
+
+        # Everything worked, this module is available
+        return True

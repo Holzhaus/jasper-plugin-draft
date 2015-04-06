@@ -1,6 +1,6 @@
 [Core]
 Name = Light Switcher i18n Demo
-Slug = localized-plugin demo
+Slug = localized-plugin-demo
 Module = localized-plugin-demo
 
 [Documentation]
