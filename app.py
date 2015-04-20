@@ -2,7 +2,8 @@
 # -*- coding: utf-8-*-
 import logging
 import time
-from core import pluginmanager, configmanager
+import core.plugin
+from core import configmanager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -13,7 +14,7 @@ class App(object):
         # Change the default value of this to de_DE to test the l18n example
         self.config.register_option('core', 'language', default_value='en_US')
 
-        self.plugins = pluginmanager.PluginManager(self.config, ['plugins'])
+        self.plugins = core.plugin.PluginManager(self.config, ['plugins'])
 
         print("********************")
         print("* Detected Plugins *")

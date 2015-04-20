@@ -1,10 +1,10 @@
 import SimpleXMLRPCServer
 import collections
 import logging
-import core.plugintypes
+import core.plugin.types
 
 
-class XMLRPCConversation(core.plugintypes.ConversationPlugin):
+class XMLRPCConversation(core.plugin.types.ConversationPlugin):
     def configure(self):
         self.register_option('host', default_value="localhost")
         self.register_option('port', default_value=8765)

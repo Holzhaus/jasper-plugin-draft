@@ -1,4 +1,4 @@
-from core.plugintypes import STTPlugin
+from core.plugin.types import STTPlugin
 
 
 class DummySTT(STTPlugin):

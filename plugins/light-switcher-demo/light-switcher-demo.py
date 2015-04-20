@@ -1,4 +1,4 @@
-from core.plugintypes import SpeechHandlerPlugin
+from core.plugin.types import SpeechHandlerPlugin
 
 
 class LightSwitcherDemo(SpeechHandlerPlugin):
