@@ -5,9 +5,8 @@ import yapsy
 import yapsy.PluginFileLocator
 import yapsy.PluginManager
 from . import types
-from . import info
 from . import decorators
-from . import analyzer
+from . import locator
 
 
 class PluginManager(object):
@@ -23,13 +22,11 @@ class PluginManager(object):
                    types.STTPlugin}
 
     def __init__(self, config, directories_list):
-        locator = yapsy.PluginFileLocator.PluginFileLocator(
-            analyzers=[analyzer.FileAnalyzer('info-ext', 'jasperplugin')])
-        locator.setPluginInfoClass(info.PluginInfo)
+        plugin_locator = locator.PluginLocator()
         pm = yapsy.PluginManager.PluginManager(
             categories_filter=self.PLUGIN_CATS,
             directories_list=directories_list,
-            plugin_locator=locator)
+            plugin_locator=plugin_locator)
         pm = decorators.PluginCheckDecorator(config, pm)
         pm = decorators.PluginConfigDecorator(config, pm)
         pm = decorators.PluginGettextDecorator(config, pm)

@@ -1,7 +1,6 @@
 [Core]
 Name = Dummy STT
 Slug = dummy-stt
-Module = dummy-stt
 
 [Documentation]
 Author = Jan Holthuis
