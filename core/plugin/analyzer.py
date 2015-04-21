@@ -38,8 +38,8 @@ class FileAnalyzer(yapsy.PluginFileLocator.PluginFileAnalyzerWithInfoFile):
         # check that the given name is valid
         name = config_parser.get("Core", "Name").strip()
         if yapsy.PLUGIN_NAME_FORBIDEN_STRING in name:
-            self._logger.debug("Plugin name contains forbiden character: %s " +
-                               "(in '%s')", yapsy.PLUGIN_NAME_FORBIDEN_STRING,
+            self._logger.debug("Plugin name contains forbidden character: %s" +
+                               " (in '%s')", yapsy.PLUGIN_NAME_FORBIDEN_STRING,
                                candidate_infofile)
             return (None, None, None)
         # check that the given slug is valid
