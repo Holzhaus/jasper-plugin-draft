@@ -14,8 +14,6 @@ class PluginManager(object):
                    types.ConversationPlugin,
                    types.SpeechHandlerPlugin.CATEGORY:
                    types.SpeechHandlerPlugin,
-                   types.EventHandlerPlugin.CATEGORY:
-                   types.EventHandlerPlugin,
                    types.TTSPlugin.CATEGORY:
                    types.TTSPlugin,
                    types.STTPlugin.CATEGORY:
