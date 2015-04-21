@@ -45,12 +45,19 @@ class FileAnalyzer(yapsy.PluginFileLocator.PluginFileAnalyzerWithInfoFile):
         # check that the given slug is valid
         slug = config_parser.get("Core", "Slug").strip()
         if len(slug) < 5:
-            self._logger.warning("Plugin slug too short (< 5 chars): '%s' " +
-                                 "(in '%s')", slug, candidate_infofile)
+            self._logger.debug("Plugin slug too short (< 5 chars): '%s' " +
+                               "(in '%s')", slug, candidate_infofile)
             return (None, None, None)
         valid_slug = slugify.slugify(slug)
         if slug != valid_slug:
-            self._logger.warning("Plugin slug invalid: '%s' != '%s' (in '%s')",
-                                 slug, valid_slug, candidate_infofile)
+            self._logger.debug("Plugin slug invalid: '%s' != '%s' (in '%s')",
+                               slug, valid_slug, candidate_infofile)
             return (None, None, None)
         return (name, "plugin", config_parser)
+
+    def getInfosDictFromPlugin(self, *args, **kwargs):
+        try:
+            return super(FileAnalyzer, self).getInfosDictFromPlugin(*args,
+                                                                    **kwargs)
+        except ValueError:
+            return (None, None)
