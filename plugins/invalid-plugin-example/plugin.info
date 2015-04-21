@@ -2,7 +2,6 @@
 Name = Invalid Plugin Example
 # invalid slug
 Slug = invalid_plugin example
-Module = invalid-plugin-example
 
 [Documentation]
 Author = Jan Holthuis

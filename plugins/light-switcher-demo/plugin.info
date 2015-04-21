@@ -1,7 +1,6 @@
 [Core]
 Name = Light Switcher Demo
 Slug = light-switcher-demo
-Module = light-switcher-demo
 
 [Documentation]
 Author = Jan Holthuis

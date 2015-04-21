@@ -1,7 +1,6 @@
 [Core]
 Name = XMLRPC Conversation Plugin
 Slug = xmlrpc-conversation
-Module = xmlrpc-conversation
 
 [Documentation]
 Author = Jan Holthuis
