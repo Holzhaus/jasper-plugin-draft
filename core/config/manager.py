@@ -2,10 +2,7 @@
 import logging
 import ConfigParser
 import slugify
-
-
-class UnknownOptionError(Exception):
-    pass
+from .exceptions import UnknownOptionError
 
 
 class ConfigManager(object):

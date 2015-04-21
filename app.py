@@ -3,14 +3,14 @@
 import logging
 import time
 import core.plugin
-from core import configmanager
+import core.config
 
 logging.basicConfig(level=logging.INFO)
 
 
 class App(object):
     def __init__(self):
-        self.config = configmanager.ConfigManager()
+        self.config = core.config.ConfigManager()
         # Change the default value of this to de_DE to test the l18n example
         self.config.register_option('core', 'language', default_value='en_US')
 
